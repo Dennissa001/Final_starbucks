@@ -173,12 +173,21 @@ def mostrar_promos():
     if not promos:
         st.info("No hay promociones disponibles")
         return
+
     st.subheader("🎉 Promociones disponibles")
-    for promo in promos:
+
+    # Mostrar en filas de 3 columnas
+    col = st.columns(3)
+    for i, promo in enumerate(promos):
         imagen_path = promo.get("imagen", "")
-        if os.path.exists(imagen_path):
-            st.image(imagen_path, width=200)
-        st.write(f"**{promo['nombre']}**: {promo['descripcion']}")
+        with col[i % 3]:
+            if os.path.exists(imagen_path):
+                st.image(imagen_path, width=200)
+            else:
+                st.image("promos/placeholder.png", width=200)  # Imagen genérica si no hay
+            st.markdown(f"**{promo['nombre']}**")
+            st.write(promo['descripcion'])
+
 
 # ----------------------------
 # Interfaz Streamlit
@@ -309,3 +318,4 @@ if st.session_state.usuario_actual:
                     st.write(f"  - {i['nombre']} S/ {i['precio']}")
         else:
             st.info("No tienes pedidos registrados.")
+
