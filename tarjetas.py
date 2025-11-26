@@ -171,11 +171,20 @@ def hacer_pedido(cliente, items, banco):
 # ----------------------------
 # Promociones
 # ----------------------------
+# tarjetas.py - Línea 186 aproximadamente
+
+# ----------------------------
+# Promociones
+# ----------------------------
 
 def mostrar_promos():
-    # Cargar promociones desde JSON
+    # Usamos la ruta del directorio actual para resolver rutas relativas
+    # Esto busca la carpeta 'promos/' en el mismo lugar que 'tarjetas.py'
+    base_dir = Path(__file__).parent 
+    
     try:
-        with open(PROMOS_FILE, "r", encoding="utf-8") as f: # Usamos PROMOS_FILE si lo tienes definido al inicio, si no "promos.json"
+        # Usamos PROMOS_FILE que definiste al inicio
+        with open(PROMOS_FILE, "r", encoding="utf-8") as f: 
             promos = json.load(f)
     except FileNotFoundError:
         st.error(f"Archivo de promociones no encontrado: {PROMOS_FILE}")
@@ -190,24 +199,25 @@ def mostrar_promos():
     
     for i, promo in enumerate(promos):
         with col[i % 3]:
-            # Construimos la ruta completa usando pathlib
+            # Construimos la ruta completa usando pathlib para mayor robustez
             ruta_relativa = promo.get("imagen", "promos/placeholder.jpg")
-            ruta_imagen_completa = base_dir / ruta_relativa # Une la ruta base con la ruta del JSON
+            ruta_imagen_completa = base_dir / ruta_relativa 
             
-            # Convierte la ruta de Path a string para os.path.exists
+            # Convierte la ruta de Path a string para Streamlit
             ruta_imagen_str = str(ruta_imagen_completa) 
             
-            # --- Aquí está el cambio clave de diagnóstico ---
+            # Comprobación de existencia (el diagnóstico final)
             if os.path.exists(ruta_imagen_str):
                 st.image(ruta_imagen_str, caption=promo['nombre'], use_column_width=True)
             else:
-                # Muestra la ruta que NO encontró la imagen. Esto te dará la pista.
-                st.error(f"❌ No se encontró la imagen en: {ruta_imagen_str}") 
+                # Si falla, te mostrará la ruta exacta que está buscando
+                st.error(f"❌ No se encontró: {ruta_imagen_str}") 
                 placeholder_url = "https://via.placeholder.com/200?text=Imagen+No+Encontrada"
                 st.image(placeholder_url, caption=f"**{promo['nombre']}** - ¡Imagen pendiente!", use_column_width=True)
 
             st.markdown(f"**{promo['nombre']}**")
             st.write(promo['descripcion'])
+
 
 
 # ----------------------------
@@ -339,6 +349,7 @@ if st.session_state.usuario_actual:
                     st.write(f"  - {i['nombre']} S/ {i['precio']}")
         else:
             st.info("No tienes pedidos registrados.")
+
 
 
 
