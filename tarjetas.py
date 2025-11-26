@@ -14,6 +14,12 @@ PEDIDOS_FILE = "pedidos.json"
 MENU_FILE = "menu.json"
 
 # ----------------------------
+# Inicializar session_state
+# ----------------------------
+if "usuario_actual" not in st.session_state:
+    st.session_state.usuario_actual = None
+
+# ----------------------------
 # Funciones para manejar JSON
 # ----------------------------
 def cargar_json(file):
@@ -91,8 +97,9 @@ st.title("☕ Sistema Starbucks Simulado")
 # Sidebar para login o registro
 opcion = st.sidebar.selectbox("Acceso", ["Login", "Registrar"])
 
-usuario_actual = None
-
+# ----------------------------
+# Registro de usuario
+# ----------------------------
 if opcion == "Registrar":
     st.subheader("Crear cuenta")
     nombre = st.text_input("Nombre completo")
@@ -103,6 +110,10 @@ if opcion == "Registrar":
             st.success("Usuario registrado con éxito. Ahora inicia sesión.")
         else:
             st.error("El email ya está registrado.")
+
+# ----------------------------
+# Login de usuario
+# ----------------------------
 elif opcion == "Login":
     st.subheader("Iniciar sesión")
     email = st.text_input("Email")
@@ -111,15 +122,16 @@ elif opcion == "Login":
         usuario = login_usuario(email, password)
         if usuario:
             st.success(f"Bienvenido {usuario['nombre']}!")
-            usuario_actual = usuario
+            st.session_state.usuario_actual = usuario
         else:
             st.error("Email o contraseña incorrectos.")
 
 # ----------------------------
 # Funciones una vez logueado
 # ----------------------------
-if usuario_actual:
-    st.subheader("Opciones")
+if st.session_state.usuario_actual:
+    usuario_actual = st.session_state.usuario_actual
+    st.subheader(f"Bienvenido, {usuario_actual['nombre']}!")
     menu_opcion = st.radio("Elige una opción:", ["Solicitar tarjeta", "Ver menú", "Hacer pedido", "Ver mis pedidos"])
 
     if menu_opcion == "Solicitar tarjeta":
@@ -157,3 +169,4 @@ if usuario_actual:
                     st.write(f"  - {i['nombre']} S/ {i['precio']}")
         else:
             st.info("No tienes pedidos registrados.")
+
