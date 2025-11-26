@@ -1,4 +1,7 @@
 [
-    {"nombre": "2x1 Latte", "descripcion": "Al comprar 1 Latte, el segundo es gratis", "imagen": "promo_latte.png"},
-    {"nombre": "Frappuccino gratis", "descripcion": "Obtén un Frappuccino gratis al acumular 50 puntos", "imagen": "promo_frap.png"}
+    {"nombre": "2x1 Latte", "descripcion": "Lleva 2 Latte al precio de 1", "imagen": "promos/latte.png"},
+    {"nombre": "Capuccino Gratis", "descripcion": "Compra un Capuccino y llévate otro gratis", "imagen": "promos/capuccino.png"},
+    {"nombre": "Frappuccino Mocha -50%", "descripcion": "Descuento del 50% en Frappuccino Mocha", "imagen": "promos/mocha.png"},
+    {"nombre": "Té Chai Latte + Galleta", "descripcion": "Llévate un Té Chai Latte con galleta gratis", "imagen": "promos/te_chai.png"},
+    {"nombre": "Cold Brew Especial", "descripcion": "Cold Brew con descuento exclusivo", "imagen": "promos/coldbrew.png"}
 ]
