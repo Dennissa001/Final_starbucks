@@ -57,7 +57,7 @@ def login_usuario(email, password):
     return None
 
 # ----------------------------
-# Funciones de tarjeta avanzada
+# Funciones de tarjeta
 # ----------------------------
 def generar_qr(texto, nombre_archivo):
     qr = qrcode.QRCode(box_size=4, border=1)
@@ -67,13 +67,15 @@ def generar_qr(texto, nombre_archivo):
     img_qr.save(nombre_archivo)
     return nombre_archivo
 
-def generar_tarjeta(nombre_cliente, dni, celular, envio_opcion, sede, banco):
+def tarjeta_existe(nombre_cliente):
     tarjetas = cargar_json(TARJETAS_FILE)
-    # Revisar si ya tiene tarjeta
     for t in tarjetas:
         if t["cliente"] == nombre_cliente:
-            return t["archivo_delante"], t["archivo_atras"], t["puntos"]
+            return t
+    return None
 
+def crear_tarjeta(nombre_cliente, dni, celular, envio_opcion, sede, banco):
+    tarjetas = cargar_json(TARJETAS_FILE)
     tarjeta_id = len(tarjetas) + 1
     fecha_creacion = datetime.now().strftime("%d/%m/%Y")
 
@@ -112,8 +114,7 @@ def generar_tarjeta(nombre_cliente, dni, celular, envio_opcion, sede, banco):
     archivo_atras = f"tarjeta_{tarjeta_id}_atras.png"
     img_atras.save(archivo_atras)
 
-    # Guardar info en JSON
-    tarjetas.append({
+    tarjeta_data = {
         "id": tarjeta_id,
         "cliente": nombre_cliente,
         "dni": dni,
@@ -126,9 +127,10 @@ def generar_tarjeta(nombre_cliente, dni, celular, envio_opcion, sede, banco):
         "archivo_atras": archivo_atras,
         "qr": qr_path,
         "puntos": 0
-    })
+    }
+    tarjetas.append(tarjeta_data)
     guardar_json(TARJETAS_FILE, tarjetas)
-    return archivo_delante, archivo_atras, 0
+    return tarjeta_data
 
 # ----------------------------
 # Funciones de pedidos
@@ -152,27 +154,30 @@ def hacer_pedido(cliente, items, banco):
     })
     guardar_json(PEDIDOS_FILE, pedidos)
 
-    # Actualizar puntos
+    # Actualizar puntos en tarjeta
     tarjetas = cargar_json(TARJETAS_FILE)
     for t in tarjetas:
         if t["cliente"] == cliente["nombre"]:
-            puntos_ganados = int(total // 10)  # 1 punto por cada S/10
+            puntos_ganados = int(total // 10)
             t["puntos"] += puntos_ganados
             guardar_json(TARJETAS_FILE, tarjetas)
             break
-
     return pedido_id, total, fecha_pedido, puntos_ganados
 
 # ----------------------------
-# Mostrar promociones
+# Promociones
 # ----------------------------
 def mostrar_promos():
     promos = cargar_json(PROMOS_FILE)
-    if promos:
-        st.subheader("🎉 Promociones disponibles")
-        for promo in promos:
-            st.image(promo["imagen"], width=200)
-            st.write(f"**{promo['nombre']}**: {promo['descripcion']}")
+    if not promos:
+        st.info("No hay promociones disponibles")
+        return
+    st.subheader("🎉 Promociones disponibles")
+    for promo in promos:
+        imagen_path = promo.get("imagen", "")
+        if os.path.exists(imagen_path):
+            st.image(imagen_path, width=200)
+        st.write(f"**{promo['nombre']}**: {promo['descripcion']}")
 
 # ----------------------------
 # Interfaz Streamlit
@@ -183,7 +188,7 @@ st.title("☕ Sistema Starbucks Avanzado")
 opcion = st.sidebar.selectbox("Acceso", ["Login", "Registrar"])
 
 # ----------------------------
-# Registro de usuario
+# Registro
 # ----------------------------
 if opcion == "Registrar":
     st.subheader("Crear cuenta")
@@ -192,7 +197,7 @@ if opcion == "Registrar":
     password = st.text_input("Contraseña", type="password")
     if st.button("Registrar"):
         if registrar_usuario(nombre, email, password):
-            st.success("Usuario registrado con éxito. Ahora inicia sesión.")
+            st.success("Usuario registrado. Ahora inicia sesión.")
         else:
             st.error("El email ya está registrado.")
 
@@ -220,17 +225,47 @@ if st.session_state.usuario_actual:
     menu_opcion = st.radio("Elige una opción:", ["Tarjeta", "Realizar pedido", "Ver mis pedidos"])
 
     # ----------------------------
-    # Tarjeta y promociones
+    # Tarjeta
     # ----------------------------
     if menu_opcion == "Tarjeta":
-        archivo_delante, archivo_atras, puntos = generar_tarjeta(
-            usuario_actual["nombre"], "", "", "Recoger en sede", "Lima Norte", "BCP"
-        )
-        st.image(archivo_delante, caption="Tarjeta Delante")
-        st.image(archivo_atras, caption="Tarjeta Atrás")
-        st.write(f"**Puntos acumulados:** {puntos}")
-        st.write("**Beneficios:** Obtén descuentos al acumular puntos")
-        mostrar_promos()
+        tarjeta = tarjeta_existe(usuario_actual["nombre"])
+        if tarjeta:
+            # Ya tiene tarjeta
+            st.image(tarjeta["archivo_delante"], caption="Tarjeta Delante")
+            st.image(tarjeta["archivo_atras"], caption="Tarjeta Atrás")
+            st.write(f"**Puntos acumulados:** {tarjeta['puntos']}")
+            st.write("**Beneficios:** Obtén descuentos al acumular puntos")
+            mostrar_promos()
+        else:
+            # Generar tarjeta
+            st.write("🎫 Solicita tu tarjeta Starbucks")
+            dni = st.text_input("DNI")
+            celular = st.text_input("Número de celular")
+            envio_opcion = st.selectbox("Método de entrega:", ["Recoger en sede", "Envío a domicilio"])
+            st.session_state.tarjeta_info["envio_opcion"] = envio_opcion
+
+            sede = ""
+            if envio_opcion == "Recoger en sede":
+                sede = st.selectbox("Selecciona la sede:", ["Lima Norte", "Lima Centro", "Miraflores", "San Isidro"])
+                fecha_recogida = (datetime.now() + timedelta(days=2)).strftime("%d/%m/%Y")
+                st.info(f"Fecha estimada de recogida: {fecha_recogida}")
+            else:
+                direccion = st.text_input("Ingresa la dirección de envío")
+                st.session_state.tarjeta_info["direccion"] = direccion
+
+            banco = st.selectbox("Selecciona el banco afiliado:", ["BCP", "Interbank", "Scotiabank", "BBVA", "Otro"])
+
+            if st.button("Generar tarjeta"):
+                if dni and celular:
+                    tarjeta_data = crear_tarjeta(usuario_actual["nombre"], dni, celular, envio_opcion, sede, banco)
+                    st.success("Tarjeta generada con éxito!")
+                    st.image(tarjeta_data["archivo_delante"], caption="Tarjeta Delante")
+                    st.image(tarjeta_data["archivo_atras"], caption="Tarjeta Atrás")
+                    st.write(f"**Puntos acumulados:** {tarjeta_data['puntos']}")
+                    st.write("**Beneficios:** Obtén descuentos al acumular puntos")
+                    mostrar_promos()
+                else:
+                    st.error("Debes ingresar DNI y celular")
 
     # ----------------------------
     # Realizar pedido
@@ -238,19 +273,22 @@ if st.session_state.usuario_actual:
     elif menu_opcion == "Realizar pedido":
         st.write("🛒 Realiza tu pedido")
         menu = mostrar_menu()
-        opciones = [f"{item['nombre']} - S/ {item['precio']}" for item in menu]
-        seleccion = st.multiselect("Selecciona tus bebidas:", opciones)
-        items_seleccionados = [menu[i] for i in range(len(menu)) if opciones[i] in seleccion]
+        if menu:
+            opciones = [f"{item['nombre']} - S/ {item['precio']}" for item in menu]
+            seleccion = st.multiselect("Selecciona tus bebidas:", opciones)
+            items_seleccionados = [menu[i] for i in range(len(menu)) if opciones[i] in seleccion]
 
-        banco = st.selectbox("Selecciona el banco para pago:", ["BCP", "Interbank", "Scotiabank", "BBVA", "Otro"])
+            banco = st.selectbox("Selecciona el banco para pago:", ["BCP", "Interbank", "Scotiabank", "BBVA", "Otro"])
 
-        if st.button("Enviar pedido"):
-            if items_seleccionados:
-                pedido_id, total, fecha_pedido, puntos_ganados = hacer_pedido(usuario_actual, items_seleccionados, banco)
-                st.success(f"Pedido #{pedido_id} registrado. Total: S/ {total} - Fecha: {fecha_pedido}")
-                st.info(f"Puntos ganados en este pedido: {puntos_ganados}")
-            else:
-                st.error("Selecciona al menos un item.")
+            if st.button("Enviar pedido"):
+                if items_seleccionados:
+                    pedido_id, total, fecha_pedido, puntos_ganados = hacer_pedido(usuario_actual, items_seleccionados, banco)
+                    st.success(f"Pedido #{pedido_id} registrado. Total: S/ {total} - Fecha: {fecha_pedido}")
+                    st.info(f"Puntos ganados en este pedido: {puntos_ganados}")
+                else:
+                    st.error("Selecciona al menos un item.")
+        else:
+            st.info("El menú está vacío.")
 
     # ----------------------------
     # Ver mis pedidos
@@ -266,4 +304,3 @@ if st.session_state.usuario_actual:
                     st.write(f"  - {i['nombre']} S/ {i['precio']}")
         else:
             st.info("No tienes pedidos registrados.")
-
