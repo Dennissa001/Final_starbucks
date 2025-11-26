@@ -19,6 +19,9 @@ MENU_FILE = "menu.json"
 if "usuario_actual" not in st.session_state:
     st.session_state.usuario_actual = None
 
+if "tarjeta_info" not in st.session_state:
+    st.session_state.tarjeta_info = {}
+
 # ----------------------------
 # Funciones para manejar JSON
 # ----------------------------
@@ -54,18 +57,25 @@ def login_usuario(email, password):
 # ----------------------------
 # Funciones de tarjeta
 # ----------------------------
-def generar_tarjeta(nombre_cliente):
+def generar_tarjeta_visual(nombre_cliente, dni, celular):
     tarjetas = cargar_json(TARJETAS_FILE)
     tarjeta_id = len(tarjetas) + 1
-    # Crear imagen simple
     img = Image.new('RGB', (400, 200), color=(30, 100, 160))
     d = ImageDraw.Draw(img)
     fnt = ImageFont.load_default()
-    d.text((10, 80), f"Tarjeta Starbucks\nCliente: {nombre_cliente}\nID: {tarjeta_id}", font=fnt, fill=(255, 255, 255))
+    d.text((10, 50), f"Tarjeta Starbucks\nCliente: {nombre_cliente}\nDNI: {dni}\nCelular: {celular}\nID: {tarjeta_id}", font=fnt, fill=(255, 255, 255))
     archivo_tarjeta = f"tarjeta_{tarjeta_id}.png"
     img.save(archivo_tarjeta)
     
-    tarjetas.append({"id": tarjeta_id, "cliente": nombre_cliente, "archivo": archivo_tarjeta, "fecha": str(datetime.now())})
+    tarjetas.append({
+        "id": tarjeta_id,
+        "cliente": nombre_cliente,
+        "dni": dni,
+        "celular": celular,
+        "archivo": archivo_tarjeta,
+        "fecha": str(datetime.now()),
+        "tarjeta_info": st.session_state.tarjeta_info
+    })
     guardar_json(TARJETAS_FILE, tarjetas)
     return archivo_tarjeta
 
@@ -73,7 +83,8 @@ def generar_tarjeta(nombre_cliente):
 # Funciones de pedidos
 # ----------------------------
 def mostrar_menu():
-    return cargar_json(MENU_FILE)
+    menu = cargar_json(MENU_FILE)
+    return menu
 
 def hacer_pedido(cliente, items):
     pedidos = cargar_json(PEDIDOS_FILE)
@@ -94,7 +105,7 @@ def hacer_pedido(cliente, items):
 # ----------------------------
 st.title("☕ Sistema Starbucks Simulado")
 
-# Sidebar para login o registro
+# Sidebar acceso
 opcion = st.sidebar.selectbox("Acceso", ["Login", "Registrar"])
 
 # ----------------------------
@@ -127,26 +138,50 @@ elif opcion == "Login":
             st.error("Email o contraseña incorrectos.")
 
 # ----------------------------
-# Funciones una vez logueado
+# Funciones después de login
 # ----------------------------
 if st.session_state.usuario_actual:
     usuario_actual = st.session_state.usuario_actual
     st.subheader(f"Bienvenido, {usuario_actual['nombre']}!")
-    menu_opcion = st.radio("Elige una opción:", ["Solicitar tarjeta", "Ver menú", "Hacer pedido", "Ver mis pedidos"])
+    menu_opcion = st.radio("Elige una opción:", ["Solicitar tarjeta", "Ver menú", "Realizar pedido", "Ver mis pedidos"])
 
+    # ----------------------------
+    # Solicitar tarjeta paso a paso
+    # ----------------------------
     if menu_opcion == "Solicitar tarjeta":
-        st.write("🎫 Genera tu tarjeta Starbucks virtual")
-        if st.button("Generar tarjeta"):
-            archivo_tarjeta = generar_tarjeta(usuario_actual["nombre"])
-            st.image(archivo_tarjeta, caption="Tu tarjeta virtual")
+        st.write("🎫 Solicita tu tarjeta Starbucks")
+        nombre_cliente = usuario_actual["nombre"]
+        dni = st.text_input("DNI")
+        celular = st.text_input("Número de celular")
+        envio_opcion = st.selectbox("¿Deseas envío o recoger en sede?", ["Recoger en sede", "Envío a domicilio"])
+        if envio_opcion == "Envío a domicilio":
+            direccion = st.text_input("Ingresa la dirección de envío")
+            st.session_state.tarjeta_info["direccion"] = direccion
+        st.session_state.tarjeta_info["envio_opcion"] = envio_opcion
 
+        if st.button("Generar tarjeta"):
+            if dni and celular:
+                archivo_tarjeta = generar_tarjeta_visual(nombre_cliente, dni, celular)
+                st.success("Tarjeta generada con éxito!")
+                st.image(archivo_tarjeta, caption="Tu tarjeta virtual")
+            else:
+                st.error("Debes ingresar DNI y celular")
+
+    # ----------------------------
+    # Ver menú
+    # ----------------------------
     elif menu_opcion == "Ver menú":
         st.write("📜 Menú de bebidas")
         menu = mostrar_menu()
-        for item in menu:
-            st.write(f"{item['nombre']} - S/ {item['precio']} ({item['categoria']})")
+        if menu:
+            st.table([{"Nombre": i["nombre"], "Precio": f"S/ {i['precio']}", "Categoría": i["categoria"]} for i in menu])
+        else:
+            st.info("El menú está vacío.")
 
-    elif menu_opcion == "Hacer pedido":
+    # ----------------------------
+    # Realizar pedido
+    # ----------------------------
+    elif menu_opcion == "Realizar pedido":
         st.write("🛒 Realiza tu pedido")
         menu = mostrar_menu()
         opciones = [f"{item['nombre']} - S/ {item['precio']}" for item in menu]
@@ -159,6 +194,9 @@ if st.session_state.usuario_actual:
             else:
                 st.error("Selecciona al menos un item.")
 
+    # ----------------------------
+    # Ver mis pedidos
+    # ----------------------------
     elif menu_opcion == "Ver mis pedidos":
         pedidos = cargar_json(PEDIDOS_FILE)
         mis_pedidos = [p for p in pedidos if p["cliente"] == usuario_actual["nombre"]]
