@@ -190,16 +190,19 @@ def mostrar_promos():
     
     for i, promo in enumerate(promos):
         with col[i % 3]:
-            # La ruta_imagen viene directamente del JSON (ej: "promos/cheescake-de-arandonos.jpg")
-            ruta_imagen = promo.get("imagen", "promos/placeholder.jpg")
+            # Construimos la ruta completa usando pathlib
+            ruta_relativa = promo.get("imagen", "promos/placeholder.jpg")
+            ruta_imagen_completa = base_dir / ruta_relativa # Une la ruta base con la ruta del JSON
             
-            # Comprobación de existencia del archivo local
-            if os.path.exists(ruta_imagen):
-                # Si existe localmente, la muestra
-                st.image(ruta_imagen, caption=promo['nombre'], use_column_width=True)
+            # Convierte la ruta de Path a string para os.path.exists
+            ruta_imagen_str = str(ruta_imagen_completa) 
+            
+            # --- Aquí está el cambio clave de diagnóstico ---
+            if os.path.exists(ruta_imagen_str):
+                st.image(ruta_imagen_str, caption=promo['nombre'], use_column_width=True)
             else:
-                # Si no existe, usamos el placeholder
-                # Nota: Streamlit puede mostrar URLs externas (el placeholder de ejemplo es una URL)
+                # Muestra la ruta que NO encontró la imagen. Esto te dará la pista.
+                st.error(f"❌ No se encontró la imagen en: {ruta_imagen_str}") 
                 placeholder_url = "https://via.placeholder.com/200?text=Imagen+No+Encontrada"
                 st.image(placeholder_url, caption=f"**{promo['nombre']}** - ¡Imagen pendiente!", use_column_width=True)
 
@@ -336,6 +339,7 @@ if st.session_state.usuario_actual:
                     st.write(f"  - {i['nombre']} S/ {i['precio']}")
         else:
             st.info("No tienes pedidos registrados.")
+
 
 
 
