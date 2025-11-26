@@ -1,9 +1,8 @@
 [
-    {"nombre": "Cheescake de arándanos", "descripcion": "Promoción especial postre", "imagen": "promos/cheescake_de_arandonos.jpg"},
-    {"nombre": "Frappuccino Mocha", "descripcion": "50% de descuento", "imagen": "promos/frappuccino_mocha.jpg"},
-    {"nombre": "Pumpkin Spice Frappuccino", "descripcion": "Promoción especial de temporada", "imagen": "promos/pumpkin_spice_frappuccino.jpg"},
-    {"nombre": "Starbucks Caffe Latte", "descripcion": "Llévate uno y el segundo a mitad de precio", "imagen": "promos/starbucks_caffe_latte.jpg"},
-    {"nombre": "Té Chai Latte + Galleta", "descripcion": "Disfruta tu té con galleta gratis", "imagen": "promos/te_chai_latte_galleta.jpg"}
+    {"nombre": "Cheescake de arándanos", "descripcion": "Promoción especial postre", "imagen": "promos/cheescake-de-arandonos.jpg"},
+    {"nombre": "Frappuccino Mocha", "descripcion": "50% de descuento", "imagen": "promos/frappuccino-mocha.jpg"},
+    {"nombre": "Pumpkin Spice Frappuccino", "descripcion": "Promoción especial de temporada", "imagen": "promos/pumpkin-spice-frappuccino.jpg"},
+    {"nombre": "Starbucks Caffe Latte", "descripcion": "Llévate uno y el segundo a mitad de precio", "imagen": "promos/starbucks-caffe-latte.jpg"},
+    {"nombre": "Té Chai Latte + Galleta", "descripcion": "Disfruta tu té con galleta gratis", "imagen": "promos/te-chai-latte-galleta.jpg"}
 ]
-
 
