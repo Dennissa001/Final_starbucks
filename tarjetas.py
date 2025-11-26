@@ -114,6 +114,7 @@ def crear_tarjeta(nombre_cliente, dni, celular, envio_opcion, sede, banco):
     archivo_atras = f"tarjeta_{tarjeta_id}_atras.png"
     img_atras.save(archivo_atras)
 
+    # ---------------- Guardar en JSON ----------------
     tarjeta_data = {
         "id": tarjeta_id,
         "cliente": nombre_cliente,
@@ -126,7 +127,7 @@ def crear_tarjeta(nombre_cliente, dni, celular, envio_opcion, sede, banco):
         "archivo_delante": archivo_delante,
         "archivo_atras": archivo_atras,
         "qr": qr_path,
-        "puntos": 0
+        "puntos": 5  # Puntos iniciales al generar tarjeta
     }
     tarjetas.append(tarjeta_data)
     guardar_json(TARJETAS_FILE, tarjetas)
@@ -222,7 +223,7 @@ elif opcion == "Login":
 if st.session_state.usuario_actual:
     usuario_actual = st.session_state.usuario_actual
     st.subheader(f"Bienvenido, {usuario_actual['nombre']}!")
-    menu_opcion = st.radio("Elige una opción:", ["Tarjeta", "Realizar pedido", "Ver mis pedidos"])
+    menu_opcion = st.radio("Elige una opción:", ["Tarjeta", "Realizar pedido", "Promociones", "Ver mis pedidos"])
 
     # ----------------------------
     # Tarjeta
@@ -235,7 +236,6 @@ if st.session_state.usuario_actual:
             st.image(tarjeta["archivo_atras"], caption="Tarjeta Atrás")
             st.write(f"**Puntos acumulados:** {tarjeta['puntos']}")
             st.write("**Beneficios:** Obtén descuentos al acumular puntos")
-            mostrar_promos()
         else:
             # Generar tarjeta
             st.write("🎫 Solicita tu tarjeta Starbucks")
@@ -258,12 +258,11 @@ if st.session_state.usuario_actual:
             if st.button("Generar tarjeta"):
                 if dni and celular:
                     tarjeta_data = crear_tarjeta(usuario_actual["nombre"], dni, celular, envio_opcion, sede, banco)
-                    st.success("Tarjeta generada con éxito!")
+                    st.success("Tarjeta generada con éxito! Has recibido 5 puntos iniciales.")
                     st.image(tarjeta_data["archivo_delante"], caption="Tarjeta Delante")
                     st.image(tarjeta_data["archivo_atras"], caption="Tarjeta Atrás")
                     st.write(f"**Puntos acumulados:** {tarjeta_data['puntos']}")
                     st.write("**Beneficios:** Obtén descuentos al acumular puntos")
-                    mostrar_promos()
                 else:
                     st.error("Debes ingresar DNI y celular")
 
@@ -289,6 +288,12 @@ if st.session_state.usuario_actual:
                     st.error("Selecciona al menos un item.")
         else:
             st.info("El menú está vacío.")
+
+    # ----------------------------
+    # Promociones
+    # ----------------------------
+    elif menu_opcion == "Promociones":
+        mostrar_promos()
 
     # ----------------------------
     # Ver mis pedidos
