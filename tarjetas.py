@@ -1,4 +1,3 @@
-# tarjetas.py
 import streamlit as st
 import json
 import os
@@ -6,6 +5,7 @@ from datetime import datetime, timedelta
 from PIL import Image, ImageDraw, ImageFont
 import qrcode
 from pathlib import Path
+
 # ----------------------------
 # Archivos JSON
 # ----------------------------
@@ -16,13 +16,20 @@ MENU_FILE = "menu.json"
 PROMOS_FILE = "promos.json"
 
 # ----------------------------
-# Inicializar session_state
+# Inicializar session_state (Añadimos navegación de promociones)
 # ----------------------------
 if "usuario_actual" not in st.session_state:
     st.session_state.usuario_actual = None
 
 if "tarjeta_info" not in st.session_state:
     st.session_state.tarjeta_info = {}
+
+# Estados para la navegación dentro de Promociones
+if "vista_promos" not in st.session_state:
+    st.session_state.vista_promos = "lista" # Puede ser "lista" o "detalle"
+
+if "promo_seleccionada" not in st.session_state:
+    st.session_state.promo_seleccionada = None
 
 # ----------------------------
 # Funciones JSON
@@ -157,6 +164,7 @@ def hacer_pedido(cliente, items, banco):
 
     # Actualizar puntos en tarjeta
     tarjetas = cargar_json(TARJETAS_FILE)
+    puntos_ganados = 0
     for t in tarjetas:
         if t["cliente"] == cliente["nombre"]:
             puntos_ganados = int(total // 10)
@@ -166,24 +174,13 @@ def hacer_pedido(cliente, items, banco):
     return pedido_id, total, fecha_pedido, puntos_ganados
 
 # ----------------------------
-# Promociones
+# Promociones (Añadida la lógica de botón)
 # ----------------------------
-# ----------------------------
-# Promociones
-# ----------------------------
-# tarjetas.py - Línea 186 aproximadamente
-
-# ----------------------------
-# Promociones
-# ----------------------------
-
 def mostrar_promos():
     # Usamos la ruta del directorio actual para resolver rutas relativas
-    # Esto busca la carpeta 'promos/' en el mismo lugar que 'tarjetas.py'
-    base_dir = Path(__file__).parent 
+    base_dir = Path(_file_).parent 
     
     try:
-        # Usamos PROMOS_FILE que definiste al inicio
         with open(PROMOS_FILE, "r", encoding="utf-8") as f: 
             promos = json.load(f)
     except FileNotFoundError:
@@ -199,25 +196,26 @@ def mostrar_promos():
     
     for i, promo in enumerate(promos):
         with col[i % 3]:
-            # Construimos la ruta completa usando pathlib para mayor robustez
+            # Construimos la ruta completa usando pathlib
             ruta_relativa = promo.get("imagen", "promos/placeholder.jpg")
-            ruta_imagen_completa = base_dir / ruta_relativa 
+            ruta_imagen_completa = base_dir / ruta_relativa
+            ruta_imagen_str = str(ruta_imagen_completa)
             
-            # Convierte la ruta de Path a string para Streamlit
-            ruta_imagen_str = str(ruta_imagen_completa) 
-            
-            # Comprobación de existencia (el diagnóstico final)
+            # Comprobación de existencia 
             if os.path.exists(ruta_imagen_str):
                 st.image(ruta_imagen_str, caption=promo['nombre'], use_column_width=True)
             else:
-                # Si falla, te mostrará la ruta exacta que está buscando
-                st.error(f"❌ No se encontró: {ruta_imagen_str}") 
-                placeholder_url = "https://via.placeholder.com/200?text=Imagen+No+Encontrada"
-                st.image(placeholder_url, caption=f"**{promo['nombre']}** - ¡Imagen pendiente!", use_column_width=True)
+                # Fallback URL si el archivo no se encuentra en el entorno de despliegue
+                st.image("https://via.placeholder.com/200?text=Imagen+No+Encontrada", caption=f"{promo['nombre']}", use_column_width=True)
 
-            st.markdown(f"**{promo['nombre']}**")
+            st.markdown(f"{promo['nombre']}")
             st.write(promo['descripcion'])
-
+            
+            # BOTÓN para la funcionalidad de detalle
+            if st.button("Ver detalles", key=f"promo_btn_{i}"):
+                st.session_state.promo_seleccionada = promo
+                st.session_state.vista_promos = "detalle"
+                st.rerun() # Recarga la app para cambiar a la vista de detalle
 
 
 # ----------------------------
@@ -254,6 +252,7 @@ elif opcion == "Login":
         if usuario:
             st.success(f"Bienvenido {usuario['nombre']}!")
             st.session_state.usuario_actual = usuario
+            st.rerun() # Para recargar y mostrar el menú
         else:
             st.error("Email o contraseña incorrectos.")
 
@@ -263,19 +262,25 @@ elif opcion == "Login":
 if st.session_state.usuario_actual:
     usuario_actual = st.session_state.usuario_actual
     st.subheader(f"Bienvenido, {usuario_actual['nombre']}!")
-    menu_opcion = st.radio("Elige una opción:", ["Tarjeta", "Realizar pedido", "Promociones", "Ver mis pedidos"])
+    
+    # Menú actualizado con 'Mis Puntos y Tarjeta' y 'Cerrar Sesión'
+    menu_opcion = st.radio("Elige una opción:", 
+        ["Mis Puntos y Tarjeta", "Realizar pedido", "Promociones", "Ver mis pedidos", "Cerrar Sesión"]
+    )
 
     # ----------------------------
-    # Tarjeta
+    # Mis Puntos y Tarjeta (Antigua 'Tarjeta')
     # ----------------------------
-    if menu_opcion == "Tarjeta":
+    if menu_opcion == "Mis Puntos y Tarjeta":
         tarjeta = tarjeta_existe(usuario_actual["nombre"])
         if tarjeta:
+            # Puntos mostrados de forma destacada
+            st.subheader(f"⭐ Tu saldo de puntos: {tarjeta['puntos']} puntos")
+            
             # Ya tiene tarjeta
             st.image(tarjeta["archivo_delante"], caption="Tarjeta Delante")
             st.image(tarjeta["archivo_atras"], caption="Tarjeta Atrás")
-            st.write(f"**Puntos acumulados:** {tarjeta['puntos']}")
-            st.write("**Beneficios:** Obtén descuentos al acumular puntos")
+            st.write("*Beneficios:* Obtén descuentos al acumular puntos")
         else:
             # Generar tarjeta
             st.write("🎫 Solicita tu tarjeta Starbucks")
@@ -301,8 +306,8 @@ if st.session_state.usuario_actual:
                     st.success("Tarjeta generada con éxito! Has recibido 5 puntos iniciales.")
                     st.image(tarjeta_data["archivo_delante"], caption="Tarjeta Delante")
                     st.image(tarjeta_data["archivo_atras"], caption="Tarjeta Atrás")
-                    st.write(f"**Puntos acumulados:** {tarjeta_data['puntos']}")
-                    st.write("**Beneficios:** Obtén descuentos al acumular puntos")
+                    st.write(f"*Puntos acumulados:* {tarjeta_data['puntos']}")
+                    st.write("*Beneficios:* Obtén descuentos al acumular puntos")
                 else:
                     st.error("Debes ingresar DNI y celular")
 
@@ -324,16 +329,48 @@ if st.session_state.usuario_actual:
                     pedido_id, total, fecha_pedido, puntos_ganados = hacer_pedido(usuario_actual, items_seleccionados, banco)
                     st.success(f"Pedido #{pedido_id} registrado. Total: S/ {total} - Fecha: {fecha_pedido}")
                     st.info(f"Puntos ganados en este pedido: {puntos_ganados}")
+                    st.rerun() # Para actualizar los puntos inmediatamente
                 else:
                     st.error("Selecciona al menos un item.")
         else:
             st.info("El menú está vacío.")
 
     # ----------------------------
-    # Promociones
+    # Promociones (Lógica de Detalle)
     # ----------------------------
     elif menu_opcion == "Promociones":
-        mostrar_promos()
+        # Navegación: Muestra la lista O el detalle
+        if st.session_state.vista_promos == "lista":
+            mostrar_promos()
+        
+        elif st.session_state.vista_promos == "detalle" and st.session_state.promo_seleccionada:
+            promo = st.session_state.promo_seleccionada
+            
+            st.subheader(f"Detalles de: {promo['nombre']}")
+            st.write(f"Descripción general: {promo['descripcion']}")
+            st.markdown("---")
+
+            # Lógica para mostrar requisitos de la promoción
+            if "Mocha" in promo['nombre']:
+                st.markdown("### Requisito: 50% de Descuento")
+                st.info("🚨 *Debes tener al menos 10 puntos* en tu tarjeta Starbucks para aplicar este 50% de descuento. ¡Asegúrate de tener saldo suficiente!")
+            elif "Latte" in promo['nombre'] or "Té" in promo['nombre']:
+                st.markdown("### Requisito: 2x1 o Descuento Afiliado")
+                st.info("🎉 ¡Excelente! Esta promoción aplica solo si el *pago se realiza con tarjeta de banco afiliado* (BCP, Interbank, Scotiabank, BBVA).")
+            else:
+                st.markdown("### Detalles Adicionales")
+                st.info("Promoción válida por tiempo limitado. No requiere puntos.")
+
+            # Muestra la imagen de nuevo en grande
+            st.image(promo.get("imagen", "promos/placeholder.jpg"), use_column_width=True, caption=promo['nombre'])
+
+            # Botón para volver a la lista
+            st.markdown("---")
+            if st.button("⬅ Volver a Promociones"):
+                st.session_state.vista_promos = "lista"
+                st.session_state.promo_seleccionada = None
+                st.rerun()
+
 
     # ----------------------------
     # Ver mis pedidos
@@ -347,14 +384,17 @@ if st.session_state.usuario_actual:
                 st.write(f"Banco: {p['banco']}")
                 for i in p["items"]:
                     st.write(f"  - {i['nombre']} S/ {i['precio']}")
+                st.markdown("---")
         else:
             st.info("No tienes pedidos registrados.")
 
-
-
-
-
-
-
-
-
+    # ----------------------------
+    # Cerrar Sesión
+    # ----------------------------
+    elif menu_opcion == "Cerrar Sesión":
+        st.session_state.usuario_actual = None
+        # Limpiamos estados de navegación
+        st.session_state.vista_promos = "lista" 
+        st.session_state.promo_seleccionada = None
+        st.success("Has cerrado sesión exitosamente. Vuelve a la barra lateral para iniciar sesión.")
+        st.rerun()
