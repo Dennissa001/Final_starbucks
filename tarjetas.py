@@ -5,7 +5,7 @@ import os
 from datetime import datetime, timedelta
 from PIL import Image, ImageDraw, ImageFont
 import qrcode
-
+from pathlib import Path
 # ----------------------------
 # Archivos JSON
 # ----------------------------
@@ -336,6 +336,7 @@ if st.session_state.usuario_actual:
                     st.write(f"  - {i['nombre']} S/ {i['precio']}")
         else:
             st.info("No tienes pedidos registrados.")
+
 
 
 
