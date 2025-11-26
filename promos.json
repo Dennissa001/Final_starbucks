@@ -1,0 +1,4 @@
+[
+    {"nombre": "2x1 Latte", "descripcion": "Al comprar 1 Latte, el segundo es gratis", "imagen": "promo_latte.png"},
+    {"nombre": "Frappuccino gratis", "descripcion": "Obtén un Frappuccino gratis al acumular 50 puntos", "imagen": "promo_frap.png"}
+]
