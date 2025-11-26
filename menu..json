@@ -1,0 +1,12 @@
+[
+    {"id": 1, "nombre": "Latte", "precio": 12.50, "categoria": "Café"},
+    {"id": 2, "nombre": "Capuccino", "precio": 13.00, "categoria": "Café"},
+    {"id": 3, "nombre": "Frapuccino Mocha", "precio": 16.00, "categoria": "Frappuccino"},
+    {"id": 4, "nombre": "Té Chai Latte", "precio": 11.50, "categoria": "Té"},
+    {"id": 5, "nombre": "Cold Brew", "precio": 14.00, "categoria": "Café frío"},
+    {"id": 6, "nombre": "Americano", "precio": 10.00, "categoria": "Café"},
+    {"id": 7, "nombre": "Mocaccino", "precio": 15.00, "categoria": "Café"},
+    {"id": 8, "nombre": "Frappuccino Vainilla", "precio": 16.00, "categoria": "Frappuccino"},
+    {"id": 9, "nombre": "Té Verde", "precio": 9.50, "categoria": "Té"},
+    {"id": 10, "nombre": "Matcha Latte", "precio": 13.50, "categoria": "Té"}
+]
