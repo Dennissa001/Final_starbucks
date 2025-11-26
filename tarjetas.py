@@ -169,22 +169,20 @@ def hacer_pedido(cliente, items, banco):
 # Promociones
 # ----------------------------
 def mostrar_promos():
-    promos = cargar_json(PROMOS_FILE)
+    promos = cargar_json("promos.json")
     if not promos:
         st.info("No hay promociones disponibles")
         return
 
     st.subheader("🎉 Promociones disponibles")
-
-    # Mostrar en filas de 3 columnas
     col = st.columns(3)
     for i, promo in enumerate(promos):
-        imagen_path = promo.get("imagen", "")
         with col[i % 3]:
-            if os.path.exists(imagen_path):
-                st.image(imagen_path, width=200)
+            ruta_imagen = promo.get("imagen", "promos/placeholder.jpg")
+            if os.path.exists(ruta_imagen):
+                st.image(ruta_imagen, width=200)
             else:
-                st.image("https://via.placeholder.com/200", width=200)  # Imagen genérica si no hay
+                st.image("promos/placeholder.jpg", width=200)
             st.markdown(f"**{promo['nombre']}**")
             st.write(promo['descripcion'])
 
@@ -318,5 +316,6 @@ if st.session_state.usuario_actual:
                     st.write(f"  - {i['nombre']} S/ {i['precio']}")
         else:
             st.info("No tienes pedidos registrados.")
+
 
 
