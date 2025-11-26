@@ -2,8 +2,9 @@
 import streamlit as st
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from PIL import Image, ImageDraw, ImageFont
+import qrcode
 
 # ----------------------------
 # Archivos JSON
@@ -18,12 +19,11 @@ MENU_FILE = "menu.json"
 # ----------------------------
 if "usuario_actual" not in st.session_state:
     st.session_state.usuario_actual = None
-
 if "tarjeta_info" not in st.session_state:
     st.session_state.tarjeta_info = {}
 
 # ----------------------------
-# Funciones para manejar JSON
+# Funciones JSON
 # ----------------------------
 def cargar_json(file):
     if not os.path.exists(file):
@@ -55,29 +55,73 @@ def login_usuario(email, password):
     return None
 
 # ----------------------------
-# Funciones de tarjeta
+# Funciones de tarjeta avanzada
 # ----------------------------
-def generar_tarjeta_visual(nombre_cliente, dni, celular):
+def generar_qr(texto, nombre_archivo):
+    qr = qrcode.QRCode(box_size=4, border=1)
+    qr.add_data(texto)
+    qr.make(fit=True)
+    img_qr = qr.make_image(fill_color="black", back_color="white")
+    img_qr.save(nombre_archivo)
+    return nombre_archivo
+
+def generar_tarjeta(nombre_cliente, dni, celular, envio_opcion, sede, banco):
     tarjetas = cargar_json(TARJETAS_FILE)
     tarjeta_id = len(tarjetas) + 1
-    img = Image.new('RGB', (400, 200), color=(30, 100, 160))
-    d = ImageDraw.Draw(img)
+    fecha_creacion = datetime.now().strftime("%d/%m/%Y")
+
+    # ---------------- Tarjeta Delante ----------------
+    img_delante = Image.new('RGB', (600, 300), color=(30, 100, 160))
+    draw = ImageDraw.Draw(img_delante)
     fnt = ImageFont.load_default()
-    d.text((10, 50), f"Tarjeta Starbucks\nCliente: {nombre_cliente}\nDNI: {dni}\nCelular: {celular}\nID: {tarjeta_id}", font=fnt, fill=(255, 255, 255))
-    archivo_tarjeta = f"tarjeta_{tarjeta_id}.png"
-    img.save(archivo_tarjeta)
-    
+    draw.text((20, 20), f"Starbucks Card", font=fnt, fill=(255,255,255))
+    draw.text((20, 60), f"Cliente: {nombre_cliente}", font=fnt, fill=(255,255,255))
+    draw.text((20, 90), f"DNI: {dni[-4:].rjust(len(dni), '*')}", font=fnt, fill=(255,255,255))
+    draw.text((20, 120), f"Celular: {celular[-4:].rjust(len(celular), '*')}", font=fnt, fill=(255,255,255))
+    draw.text((20, 150), f"Método: {envio_opcion}", font=fnt, fill=(255,255,255))
+    if envio_opcion == "Recoger en sede":
+        fecha_recogida = (datetime.now() + timedelta(days=2)).strftime("%d/%m/%Y")
+        draw.text((20, 180), f"Sede: {sede} - Fecha: {fecha_recogida}", font=fnt, fill=(255,255,255))
+    else:
+        draw.text((20, 180), f"Dirección: {st.session_state.tarjeta_info.get('direccion','')}", font=fnt, fill=(255,255,255))
+    draw.text((20, 210), f"Banco afiliado: {banco}", font=fnt, fill=(255,255,255))
+
+    # QR
+    qr_path = f"qr_tarjeta_{tarjeta_id}.png"
+    generar_qr(f"ID:{tarjeta_id}|Cliente:{nombre_cliente}", qr_path)
+    qr_img = Image.open(qr_path)
+    img_delante.paste(qr_img, (450, 180))
+
+    archivo_delante = f"tarjeta_{tarjeta_id}_delante.png"
+    img_delante.save(archivo_delante)
+
+    # ---------------- Tarjeta Atrás ----------------
+    img_atras = Image.new('RGB', (600, 300), color=(100, 100, 100))
+    draw = ImageDraw.Draw(img_atras)
+    draw.text((20, 20), "Starbucks Card - Atrás", font=fnt, fill=(255,255,255))
+    draw.text((20, 60), f"ID de tarjeta: {tarjeta_id}", font=fnt, fill=(255,255,255))
+    draw.text((20, 90), f"Banco afiliado: {banco}", font=fnt, fill=(255,255,255))
+    draw.text((20, 120), "Gracias por usar Starbucks!", font=fnt, fill=(255,255,255))
+    archivo_atras = f"tarjeta_{tarjeta_id}_atras.png"
+    img_atras.save(archivo_atras)
+
+    # Guardar info en JSON
     tarjetas.append({
         "id": tarjeta_id,
         "cliente": nombre_cliente,
         "dni": dni,
         "celular": celular,
-        "archivo": archivo_tarjeta,
-        "fecha": str(datetime.now()),
-        "tarjeta_info": st.session_state.tarjeta_info
+        "envio_opcion": envio_opcion,
+        "sede": sede,
+        "banco": banco,
+        "fecha_creacion": fecha_creacion,
+        "archivo_delante": archivo_delante,
+        "archivo_atras": archivo_atras,
+        "qr": qr_path
     })
     guardar_json(TARJETAS_FILE, tarjetas)
-    return archivo_tarjeta
+
+    return archivo_delante, archivo_atras
 
 # ----------------------------
 # Funciones de pedidos
@@ -86,24 +130,26 @@ def mostrar_menu():
     menu = cargar_json(MENU_FILE)
     return menu
 
-def hacer_pedido(cliente, items):
+def hacer_pedido(cliente, items, banco):
     pedidos = cargar_json(PEDIDOS_FILE)
     pedido_id = len(pedidos) + 1
     total = sum(item["precio"] for item in items)
+    fecha_pedido = datetime.now().strftime("%d/%m/%Y %H:%M")
     pedidos.append({
         "id": pedido_id,
         "cliente": cliente["nombre"],
         "items": items,
         "total": total,
-        "fecha": str(datetime.now())
+        "banco": banco,
+        "fecha": fecha_pedido
     })
     guardar_json(PEDIDOS_FILE, pedidos)
-    return pedido_id, total
+    return pedido_id, total, fecha_pedido
 
 # ----------------------------
 # Interfaz Streamlit
 # ----------------------------
-st.title("☕ Sistema Starbucks Simulado")
+st.title("☕ Sistema Starbucks Avanzado")
 
 # Sidebar acceso
 opcion = st.sidebar.selectbox("Acceso", ["Login", "Registrar"])
@@ -123,7 +169,7 @@ if opcion == "Registrar":
             st.error("El email ya está registrado.")
 
 # ----------------------------
-# Login de usuario
+# Login
 # ----------------------------
 elif opcion == "Login":
     st.subheader("Iniciar sesión")
@@ -146,24 +192,33 @@ if st.session_state.usuario_actual:
     menu_opcion = st.radio("Elige una opción:", ["Solicitar tarjeta", "Ver menú", "Realizar pedido", "Ver mis pedidos"])
 
     # ----------------------------
-    # Solicitar tarjeta paso a paso
+    # Solicitar tarjeta avanzada
     # ----------------------------
     if menu_opcion == "Solicitar tarjeta":
         st.write("🎫 Solicita tu tarjeta Starbucks")
         nombre_cliente = usuario_actual["nombre"]
         dni = st.text_input("DNI")
         celular = st.text_input("Número de celular")
-        envio_opcion = st.selectbox("¿Deseas envío o recoger en sede?", ["Recoger en sede", "Envío a domicilio"])
-        if envio_opcion == "Envío a domicilio":
+        envio_opcion = st.selectbox("Método de entrega:", ["Recoger en sede", "Envío a domicilio"])
+        st.session_state.tarjeta_info["envio_opcion"] = envio_opcion
+
+        sede = ""
+        if envio_opcion == "Recoger en sede":
+            sede = st.selectbox("Selecciona la sede:", ["Lima Norte", "Lima Centro", "Miraflores", "San Isidro"])
+            fecha_recogida = (datetime.now() + timedelta(days=2)).strftime("%d/%m/%Y")
+            st.info(f"Fecha estimada de recogida: {fecha_recogida}")
+        else:
             direccion = st.text_input("Ingresa la dirección de envío")
             st.session_state.tarjeta_info["direccion"] = direccion
-        st.session_state.tarjeta_info["envio_opcion"] = envio_opcion
+
+        banco = st.selectbox("Selecciona el banco afiliado:", ["BCP", "Interbank", "Scotiabank", "BBVA", "Otro"])
 
         if st.button("Generar tarjeta"):
             if dni and celular:
-                archivo_tarjeta = generar_tarjeta_visual(nombre_cliente, dni, celular)
+                archivo_delante, archivo_atras = generar_tarjeta(nombre_cliente, dni, celular, envio_opcion, sede, banco)
                 st.success("Tarjeta generada con éxito!")
-                st.image(archivo_tarjeta, caption="Tu tarjeta virtual")
+                st.image(archivo_delante, caption="Tarjeta Delante")
+                st.image(archivo_atras, caption="Tarjeta Atrás")
             else:
                 st.error("Debes ingresar DNI y celular")
 
@@ -187,10 +242,13 @@ if st.session_state.usuario_actual:
         opciones = [f"{item['nombre']} - S/ {item['precio']}" for item in menu]
         seleccion = st.multiselect("Selecciona tus bebidas:", opciones)
         items_seleccionados = [menu[i] for i in range(len(menu)) if opciones[i] in seleccion]
+
+        banco = st.selectbox("Selecciona el banco para pago:", ["BCP", "Interbank", "Scotiabank", "BBVA", "Otro"])
+
         if st.button("Enviar pedido"):
             if items_seleccionados:
-                pedido_id, total = hacer_pedido(usuario_actual, items_seleccionados)
-                st.success(f"Pedido #{pedido_id} registrado. Total: S/ {total}")
+                pedido_id, total, fecha_pedido = hacer_pedido(usuario_actual, items_seleccionados, banco)
+                st.success(f"Pedido #{pedido_id} registrado. Total: S/ {total} - Fecha: {fecha_pedido}")
             else:
                 st.error("Selecciona al menos un item.")
 
@@ -203,6 +261,7 @@ if st.session_state.usuario_actual:
         if mis_pedidos:
             for p in mis_pedidos:
                 st.write(f"Pedido #{p['id']} - Total: S/ {p['total']} - Fecha: {p['fecha']}")
+                st.write(f"Banco: {p['banco']}")
                 for i in p["items"]:
                     st.write(f"  - {i['nombre']} S/ {i['precio']}")
         else:
