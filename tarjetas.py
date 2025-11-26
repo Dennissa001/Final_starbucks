@@ -168,12 +168,18 @@ def hacer_pedido(cliente, items, banco):
 # ----------------------------
 # Promociones
 # ----------------------------
-
+# ----------------------------
+# Promociones
+# ----------------------------
 
 def mostrar_promos():
     # Cargar promociones desde JSON
-    with open("promos.json", "r", encoding="utf-8") as f:
-        promos = json.load(f)
+    try:
+        with open(PROMOS_FILE, "r", encoding="utf-8") as f: # Usamos PROMOS_FILE si lo tienes definido al inicio, si no "promos.json"
+            promos = json.load(f)
+    except FileNotFoundError:
+        st.error(f"Archivo de promociones no encontrado: {PROMOS_FILE}")
+        return
 
     if not promos:
         st.info("No hay promociones disponibles")
@@ -184,13 +190,19 @@ def mostrar_promos():
     
     for i, promo in enumerate(promos):
         with col[i % 3]:
+            # La ruta_imagen viene directamente del JSON (ej: "promos/cheescake-de-arandonos.jpg")
             ruta_imagen = promo.get("imagen", "promos/placeholder.jpg")
             
-            # Si la imagen local no existe, usa el placeholder
-            if not os.path.exists(ruta_imagen):
-                ruta_imagen = "https://via.placeholder.com/200"
-            
-            st.image(ruta_imagen, width=200)
+            # Comprobación de existencia del archivo local
+            if os.path.exists(ruta_imagen):
+                # Si existe localmente, la muestra
+                st.image(ruta_imagen, caption=promo['nombre'], use_column_width=True)
+            else:
+                # Si no existe, usamos el placeholder
+                # Nota: Streamlit puede mostrar URLs externas (el placeholder de ejemplo es una URL)
+                placeholder_url = "https://via.placeholder.com/200?text=Imagen+No+Encontrada"
+                st.image(placeholder_url, caption=f"**{promo['nombre']}** - ¡Imagen pendiente!", use_column_width=True)
+
             st.markdown(f"**{promo['nombre']}**")
             st.write(promo['descripcion'])
 
@@ -324,6 +336,7 @@ if st.session_state.usuario_actual:
                     st.write(f"  - {i['nombre']} S/ {i['precio']}")
         else:
             st.info("No tienes pedidos registrados.")
+
 
 
 
