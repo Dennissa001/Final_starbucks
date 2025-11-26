@@ -184,7 +184,7 @@ def mostrar_promos():
             if os.path.exists(imagen_path):
                 st.image(imagen_path, width=200)
             else:
-                st.image("promos/placeholder.png", width=200)  # Imagen genérica si no hay
+                st.image("https://via.placeholder.com/200", width=200)  # Imagen genérica si no hay
             st.markdown(f"**{promo['nombre']}**")
             st.write(promo['descripcion'])
 
@@ -318,4 +318,5 @@ if st.session_state.usuario_actual:
                     st.write(f"  - {i['nombre']} S/ {i['precio']}")
         else:
             st.info("No tienes pedidos registrados.")
+
 
