@@ -178,13 +178,11 @@ def mostrar_promos():
     col = st.columns(3)
     for i, promo in enumerate(promos):
         with col[i % 3]:
-            ruta_imagen = promo.get("imagen", "promos/placeholder.jpg")
-            if os.path.exists(ruta_imagen):
-                st.image(ruta_imagen, width=200)
-            else:
-                st.image("promos/placeholder.jpg", width=200)
+            ruta_imagen = promo.get("imagen", "https://via.placeholder.com/200")
+            st.image(ruta_imagen, width=200)
             st.markdown(f"**{promo['nombre']}**")
             st.write(promo['descripcion'])
+
 
 
 # ----------------------------
@@ -316,6 +314,7 @@ if st.session_state.usuario_actual:
                     st.write(f"  - {i['nombre']} S/ {i['precio']}")
         else:
             st.info("No tienes pedidos registrados.")
+
 
 
 
