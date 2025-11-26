@@ -4,7 +4,7 @@ import os
 from datetime import datetime, timedelta
 from PIL import Image, ImageDraw, ImageFont
 import qrcode
-from pathlib import Path
+from pathlib import Path # Mantenemos el import, aunque ya no se usa _file_
 
 # ----------------------------
 # Archivos JSON
@@ -177,8 +177,9 @@ def hacer_pedido(cliente, items, banco):
 # Promociones (Añadida la lógica de botón)
 # ----------------------------
 def mostrar_promos():
-    # Usamos la ruta del directorio actual para resolver rutas relativas
-    base_dir = Path(_file_).parent 
+    # Se ha eliminado el uso de Path(_file_).parent ya que causa NameError en Streamlit
+    # Ahora se usa la ruta relativa directamente, asumiendo que el script se ejecuta 
+    # desde la carpeta que contiene los archivos de promociones.
     
     try:
         with open(PROMOS_FILE, "r", encoding="utf-8") as f: 
@@ -196,16 +197,14 @@ def mostrar_promos():
     
     for i, promo in enumerate(promos):
         with col[i % 3]:
-            # Construimos la ruta completa usando pathlib
+            # Usamos la ruta relativa directamente. Streamlit maneja rutas relativas al script.
             ruta_relativa = promo.get("imagen", "promos/placeholder.jpg")
-            ruta_imagen_completa = base_dir / ruta_relativa
-            ruta_imagen_str = str(ruta_imagen_completa)
             
-            # Comprobación de existencia 
-            if os.path.exists(ruta_imagen_str):
-                st.image(ruta_imagen_str, caption=promo['nombre'], use_column_width=True)
+            # Comprobación de existencia con la ruta relativa
+            if os.path.exists(ruta_relativa):
+                st.image(ruta_relativa, caption=promo['nombre'], use_column_width=True)
             else:
-                # Fallback URL si el archivo no se encuentra en el entorno de despliegue
+                # Fallback URL si el archivo no se encuentra localmente
                 st.image("https://via.placeholder.com/200?text=Imagen+No+Encontrada", caption=f"{promo['nombre']}", use_column_width=True)
 
             st.markdown(f"{promo['nombre']}")
@@ -362,7 +361,13 @@ if st.session_state.usuario_actual:
                 st.info("Promoción válida por tiempo limitado. No requiere puntos.")
 
             # Muestra la imagen de nuevo en grande
-            st.image(promo.get("imagen", "promos/placeholder.jpg"), use_column_width=True, caption=promo['nombre'])
+            # Aquí también usamos la ruta relativa directamente
+            ruta_relativa = promo.get("imagen", "promos/placeholder.jpg")
+            if os.path.exists(ruta_relativa):
+                st.image(ruta_relativa, use_column_width=True, caption=promo['nombre'])
+            else:
+                st.image("https://via.placeholder.com/200?text=Imagen+No+Encontrada", use_column_width=True, caption=promo['nombre'])
+
 
             # Botón para volver a la lista
             st.markdown("---")
